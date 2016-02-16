@@ -1,0 +1,15 @@
+{
+  "name": "bb8-example",
+  "version": "1.0.0",
+  "description": "BB8 (Sphero) examples",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Yago Pérez",
+  "license": "ISC",
+  "dependencies": {
+    "noble": "^1.3.0",
+    "sphero": "^0.8.2"
+  }
+}
