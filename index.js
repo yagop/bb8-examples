@@ -1,5 +1,6 @@
 #! /usr/bin/env node
 
+var Promise = require("bluebird");
 var sphero = require("sphero");
 
 var SPHERO_MAC_ADDR = process.argv[2];
@@ -8,44 +9,60 @@ if (!SPHERO_MAC_ADDR) {
   process.exit(1);
 }
 
-function changeRedColorTill255 (color, timeout, callback) {
-  if (color < 255) {
-    bb8.color({ red: color, green: 0, blue: 0 }, function () {
-      setTimeout(function () {
-        changeRedColorTill255(color+2, timeout, callback);
-      }, timeout);
-    });
-  } else {
-    callback();
-  }
-}
-
-function blush () {
-  // TODO: Handle errors
-  bb8.setStabilization(0, function (err, data) {
-    // Para volver luego al color original
-    bb8.getColor(function (err, oldColor) {
-      
-      bb8.setRawMotors({lmode: 0x02, lpower: 120, rmode: 0x02, rpower: 120});
-      
-      // Tras 3 segundos
-      setTimeout(function () {
-        bb8.setRawMotors({lmode: 0x03, rmode: 0x03});
-        changeRedColorTill255(0, 100, function () {
-          // After changing to RED
-          
-        });
-      }, 150);
-    });
-  });
-}
-
 var bb8 = sphero(SPHERO_MAC_ADDR);
 
-bb8.on("error", function (err, data) {
-  console.error(err, data);
-});
+// Promisify spero functions
+bb8.colorPromise = Promise.promisify(bb8.color);
+bb8.getColorPromise = Promise.promisify(bb8.getColor);
+bb8.setRawMotorsPromise = Promise.promisify(bb8.setRawMotors);
+bb8.setStabilizationPromise = Promise.promisify(bb8.setStabilization);
+
+function nock (color) {
+  return bb8.colorPromise(color)
+    .then(function () {
+      return bb8.setRawMotorsPromise({lmode: 0x02, lpower: 80, rmode: 0x02, rpower: 80})
+        .then(function () {
+          return bb8.setRawMotorsPromise({lmode: 0x01, lpower: 80, rmode: 0x01, rpower: 80})
+            .then(function () {
+              return bb8.colorPromise('black')
+                .then(function () {
+                  // Stop motors
+                  return bb8.setRawMotorsPromise({lmode: 0x00, rmode: 0x00});
+                });
+            }).delay(100); // Delay 100ms the Promise resolution 
+        }).delay(100); 
+    });
+}
+
+function yes (times) {
+  return bb8.getColorPromise()
+    .then(function (originalColor) {
+      // Nock tree times with green color
+      return nock('green')
+        .then(function () {
+          return nock('green');
+        })
+        .then(function () {
+          return nock('green');
+        })
+        .then(function () {
+          // Stabilize and set back original color
+          return bb8.setStabilizationPromise(1)
+            .then(function () {
+              return bb8.colorPromise(originalColor);
+            });
+        });
+    });
+}
 
 bb8.connect(function () {
-  blush();
+  // Set blue color to check if its set back
+  bb8.colorPromise('blue')
+    .delay(200) // Wait 200ms before start the party
+    .then(yes)
+    .catch(function (err) {
+      // Stabilize in case it throws an error
+      console.error(err);
+      return bb8.setStabilizationPromise(1);
+    });
 });

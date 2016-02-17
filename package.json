@@ -9,6 +9,7 @@
   "author": "Yago Pérez",
   "license": "ISC",
   "dependencies": {
+    "bluebird": "^3.3.1",
     "noble": "^1.3.0",
     "sphero": "^0.8.2"
   }
