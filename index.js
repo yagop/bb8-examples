@@ -34,7 +34,7 @@ function nock (color) {
     });
 }
 
-function yes (times) {
+function yes () {
   return bb8.getColorPromise()
     .then(function (originalColor) {
       // Nock tree times with green color
@@ -58,7 +58,7 @@ function yes (times) {
 bb8.connect(function () {
   // Set blue color to check if its set back
   bb8.colorPromise('blue')
-    .delay(200) // Wait 200ms before start the party
+    .delay(200) // Wait 200ms before the party starts
     .then(yes)
     .catch(function (err) {
       // Stabilize in case it throws an error
